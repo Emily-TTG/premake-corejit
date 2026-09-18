@@ -4,6 +4,9 @@
 #include <locale.h>
 #include <stdlib.h>
 #include <stdio.h>
+#if PLATFORM_WINDOWS
+#include <windows.h>
+#endif
 
 static void jitprof_start(lua_State* L) { (void) L; }
 static void jitprof_stop(lua_State* L)  { (void) L; }
@@ -15,13 +18,24 @@ static void demo_log_sink(int stream, const char* msg, size_t len, void* udata)
 	fwrite(msg, 1, len, stderr);
 }
 
+#if PLATFORM_WINDOWS
+int wmain(int argc, const wchar_t** argv)
+#else
 int main(int argc, const char** argv)
+#endif
 {
 	lua_State* L;
 	int z;
 
+#if PLATFORM_WINDOWS
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
+	if (!setlocale(LC_CTYPE, ".UTF-8"))
+		setlocale(LC_CTYPE, "");
+#else
 	if (!setlocale(LC_CTYPE, "C.UTF-8"))
 		setlocale(LC_CTYPE, "");
+#endif
 
 	L = luaL_newstate();
 	luaL_openlibs(L);

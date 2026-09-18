@@ -1,7 +1,9 @@
-local root = assert(arg[1], "usage: embed.lua <source-root> <output.c>")
-local outfile = assert(arg[2], "usage: embed.lua <source-root> <output.c>")
+local root = assert(arg[1], "usage: embed.lua <source-root> <output.c> <manifests...>")
+local outfile = assert(arg[2], "usage: embed.lua <source-root> <output.c> <manifests...>")
 
-root = root:gsub("/+$", "")
+local function slashes(p) return (p:gsub("\\", "/")) end
+
+root = slashes(root):gsub("/+$", "")
 
 local function dirname(p)  return (p:gsub("/[^/]*$", "")) end
 local function basename(p) return (p:gsub(".*/", ""))     end
@@ -21,9 +23,12 @@ end
 
 local function discoverManifests()
 	local list = {}
-	local pipe = assert(io.popen('find "' .. root .. '" -name _manifest.lua -type f 2>/dev/null'))
-	for line in pipe:lines() do
-		local rel = line:sub(#root + 2)
+	for i = 3, #arg do
+		local abs = slashes(arg[i])
+		local rel = abs
+		if abs:sub(1, #root + 1) == root .. "/" then
+			rel = abs:sub(#root + 2)
+		end
 		local skip = rel:match("^contrib/") or rel:match("^website/")
 			or rel:match("^binmodules/") or rel:match("/tests/")
 			or rel:match("^packages/")
@@ -31,7 +36,6 @@ local function discoverManifests()
 			table.insert(list, rel)
 		end
 	end
-	pipe:close()
 	table.sort(list)
 	return list
 end
