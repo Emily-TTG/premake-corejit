@@ -55,6 +55,7 @@ add_custom_command(
 file(GLOB HOST_SOURCES "${CMAKE_SOURCE_DIR}/src/host/*.c")
 list(FILTER HOST_SOURCES EXCLUDE REGEX "(curl_utils|http_download|http_get|http_post|zip_extract|zip_list|premake_main|debug_prompt)\\.c$")
 list(APPEND HOST_SOURCES "${CMAKE_SOURCE_DIR}/cmake/debug_prompt_stub.c")
+list(APPEND HOST_SOURCES "${CMAKE_SOURCE_DIR}/cmake/premake_log.c")
 
 add_library(premake_core OBJECT ${HOST_SOURCES} "${GENERATED_SCRIPTS}")
 add_dependencies(premake_core luajit_ext)
@@ -66,6 +67,7 @@ target_compile_options(premake_core PRIVATE "-include" "${CMAKE_SOURCE_DIR}/cmak
 target_include_directories(premake_core PUBLIC
 	"${CMAKE_SOURCE_DIR}/src"
 	"${CMAKE_SOURCE_DIR}/src/host"
+	"${CMAKE_SOURCE_DIR}/cmake"
 	"${LUACOMPAT_DIR}"
 	${LUAJIT_INCLUDE_DIRS})
 
@@ -82,7 +84,7 @@ target_include_directories(
 
 target_link_libraries(libpremake PUBLIC ${LUAJIT_LINK_LIBRARIES} m ${CMAKE_DL_LIBS} uuid)
 
-add_executable(premake5-jit" ${CMAKE_SOURCE_DIR}/cmake/premake_entry.c" $<TARGET_OBJECTS:premake_core>)
+add_executable(premake5-jit "${CMAKE_SOURCE_DIR}/cmake/premake_entry.c" $<TARGET_OBJECTS:premake_core>)
 target_include_directories(
 	premake5-jit PRIVATE
 	"${CMAKE_SOURCE_DIR}/src"

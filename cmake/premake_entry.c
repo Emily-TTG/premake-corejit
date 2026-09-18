@@ -1,4 +1,5 @@
 #include "premake.h"
+#include "premake_log.h"
 
 #include <locale.h>
 #include <stdlib.h>
@@ -6,6 +7,13 @@
 
 static void jitprof_start(lua_State* L) { (void) L; }
 static void jitprof_stop(lua_State* L)  { (void) L; }
+
+static void demo_log_sink(int stream, const char* msg, size_t len, void* udata)
+{
+	(void) udata;
+	fprintf(stderr, "[premake:%s] ", stream == PREMAKE_LOG_ERR ? "ERR" : "OUT");
+	fwrite(msg, 1, len, stderr);
+}
 
 int main(int argc, const char** argv)
 {
@@ -20,6 +28,11 @@ int main(int argc, const char** argv)
 
 	z = premake_init(L);
 	if (z == OKAY) {
+		if (getenv("PMK_LOG_DEMO"))
+			premake_set_log_sink(demo_log_sink, NULL);
+
+		premake_install_lua_log(L);
+
 		jitprof_start(L);
 		z = premake_execute(L, argc, argv, "src/_premake_main.lua");
 		jitprof_stop(L);

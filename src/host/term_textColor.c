@@ -5,6 +5,7 @@
  */
 
 #include "premake.h"
+#include "premake_log.h"
 
 #if PLATFORM_WINDOWS
 #include <io.h>
@@ -56,6 +57,9 @@ int term_doGetTextColor()
 
 void term_doSetTextColor(int color)
 {
+	if (premake_log_has_sink())
+		return;
+
 #if PLATFORM_WINDOWS
 	if (color >= 0 && shouldUseColors())
 	{

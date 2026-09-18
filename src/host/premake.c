@@ -9,6 +9,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "premake.h"
+#include "premake_log.h"
 #ifdef LUA_STATICLIB
 #include "lua_shimtable.h"
 #include "lauxlib.h"
@@ -293,10 +294,22 @@ static void setErrorColor(lua_State* L)
 void premake_handle_lua_error(lua_State* L)
 {
 	const char* message = lua_tostring(L, -1);
-	int oldColor = term_doGetTextColor();
-	setErrorColor(L);
 	/* avoid printing a double Error: prefix for premake.error() messages */
 	int has_error_prefix = strncmp(message, "** Error:", 9) == 0;
+
+	if (premake_log_has_sink()) {
+		char buf[4096];
+		int len = snprintf(buf, sizeof(buf),
+			has_error_prefix ? "%s\n" : ERROR_MESSAGE, message);
+		if (len > 0) {
+			size_t n = (len < (int)sizeof(buf)) ? (size_t)len : sizeof(buf) - 1;
+			premake_log_write(PREMAKE_LOG_ERR, buf, n);
+		}
+		return;
+	}
+
+	int oldColor = term_doGetTextColor();
+	setErrorColor(L);
 	printf(has_error_prefix ? "%s\n" : ERROR_MESSAGE, message);
 	term_doSetTextColor(oldColor);
 }
@@ -811,9 +824,9 @@ typedef struct UWideString {
 	size_t len;
 	wchar_t s[1]; /* actual size is len + 1 */
 } UWideString;
-  
+
 #define LUA_WIDESTRING "LUA_WIDESTRING"
-  
+
 static UWideString *newwidestr (lua_State *L, const wchar_t *s, size_t len) {
 	UWideString *ws = (UWideString *)lua_newuserdata(L, sizeof(UWideString) + len * sizeof(wchar_t));
 	luaL_newmetatable(L, LUA_WIDESTRING);
@@ -823,14 +836,14 @@ static UWideString *newwidestr (lua_State *L, const wchar_t *s, size_t len) {
 	ws->len = len;
 	return ws;
 }
-  
+
 const wchar_t *luaL_convertlstringi (lua_State *L, int idx, size_t *len)
 {
 	size_t nlen;
 	const char *s = lua_tolstring(L, idx, &nlen);
 	return luaL_convertlstring(L, s, nlen, len);
 }
-  
+
 const char *luaL_convertlwstring (lua_State *L, const wchar_t *ws, size_t wlen, size_t *len)
 {
 	int size;
@@ -851,7 +864,7 @@ const char *luaL_convertlwstring (lua_State *L, const wchar_t *ws, size_t wlen, 
 	if (len != NULL) *len = size;
 	return lua_tostring(L, -1);
 }
-  
+
 const wchar_t *luaL_convertlstring (lua_State *L, const char *s, size_t nlen, size_t *len)
 {
 	int size;
@@ -865,13 +878,13 @@ const wchar_t *luaL_convertlstring (lua_State *L, const char *s, size_t nlen, si
 	  if (len != NULL) *len = 0;
 	  return NULL;
 	}
-  
+
 	ws = newwidestr(L, NULL, size);
 	MultiByteToWideChar(CP_UTF8, 0, s, nlen, ws->s, size);
 	if (len != NULL) *len = size;
 	return ws->s;
 }
-  
+
 const char *(luaL_convertwstring) (lua_State *L, const wchar_t *ws, size_t *len)
 {
 	int size, wlen;
@@ -893,7 +906,7 @@ const char *(luaL_convertwstring) (lua_State *L, const wchar_t *ws, size_t *len)
 	if (len != NULL) *len = size;
 	return lua_tostring(L, -1);
 }
-  
+
 const wchar_t *luaL_checkconvertlstring (lua_State *L, int idx, size_t *len)
 {
 	size_t nlen;
@@ -902,7 +915,7 @@ const wchar_t *luaL_checkconvertlstring (lua_State *L, int idx, size_t *len)
 	if (ws == NULL) luaL_error(L, "conversion failure");
 	return ws;
 }
-  
+
 const wchar_t *luaL_optconvertlstring (lua_State *L, int idx, const wchar_t *def, size_t *len)
 {
 	if (lua_isnoneornil(L, idx)) {
